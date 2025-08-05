@@ -1,7 +1,7 @@
 %Parameters for Simscape Model
 clear all
 tic
-simTime = 2002;
+simTime = 4004;
 t = [0:0.01:(simTime-0.01)];
 
 %load('PmusHatSmoothNorm_30_10.mat')
@@ -11,8 +11,8 @@ t = [0:0.01:(simTime-0.01)];
 %hold off
 
 %VENTILATOR SETTINGS
-PEEP = 5; %cmH2O, Posistive End Expiratory Pressure
-Paw_Ref = 11; %Pressure target, cmH_2O
+PEEP = 8.5; %cmH2O, Posistive End Expiratory Pressure
+Paw_Ref = 13.5; %Pressure target, cmH_2O
 
 %Reference support target changes after 60s
 Paw_Ref_in = [t', ones(length(t),1)*Paw_Ref];
@@ -35,7 +35,7 @@ beta = 3.2576;
 %CONTROLLER
 %PID
 Kp = 3; %Proportional constant, PID cntrol
-Ti = 0.1; %Integral time constant, PID control
+Ti = 0.01; %Integral time constant, PID control
 D = 0; %Derivative constant, PID control
 
 P = 1;
@@ -57,8 +57,8 @@ yIntDrivePres = -32.5;
 a2 = 0.1; %gain for muscle pressure driven support level adjustment
 
 %INITIAL PATIENT SETTINGS
-Resistance = 8.25; %cmH2O/L/s
-Compliance = 1/13.8; %L/cmH2O
+Resistance = 5.27; %cmH2O/L/s
+Compliance = 1/27.37; %L/cmH2O
 %initialMaxEffort = 10.5; %-cmH2O, initial maximum effort of patient
 %maximum effort changes as PSV level changes
 timeInsp = 1.4; %patient inspiration time, seconds
@@ -233,7 +233,7 @@ if effortMode == 1
     end
     effortIn = [t' initialMaxEffort'];
 else
-    initialMaxEffort = 10.35+2;
+    initialMaxEffort = 13.08;
 end
 
 
@@ -244,8 +244,32 @@ load('general_model.mat')
 %lengthBreath = length(pmus_model)-1;
 %startPos = 1;
 Pmus = [];
+range_eff = 1.56/2;
 for idx=1:simTime/7
-    Pmus = [Pmus pmus_model];
+
+    %randomly shorten/lengthen pmus
+    pos_neg = 0;
+    while pos_neg == 0
+        pos_neg = randi([-1,1],1);
+    end
+    adjust_length = rand()*range_eff;
+    length_eff = 700 + (pos_neg*adjust_length*100)
+    % renormalise length to 1 second
+    t_old = linspace(1,700,700);
+    t_new = linspace(1,length_eff,700);
+    
+    % Normalize time for interpolation
+    tau = t_old / 700;
+    tau_new = t_new / 300;
+    
+    Pmus_stretched = interp1(tau, pmus_model, tau_new, 'spline');
+    if length(Pmus_stretched) >= 700
+        Pmus_stretched = Pmus_stretched(1:700);
+    else
+        length_stretched_eff = length(Pmus_stretched);
+        Pmus_stretched = Pmus_stretched + zeros(2,700 - length_stretched_eff);
+    end
+    Pmus = [Pmus Pmus_stretched];
     %startPos = startPos + lengthBreath;
     %Pmus(startPos+1:startPos+231) = 0;
     %startPos = startPos + 231;
@@ -257,15 +281,20 @@ invStateIn = [t',invState'];
 Pmus_in = [t', Pmus(1:end)'];
 modeIn = [t', mode'];
 
+
 %% Patient Response Variables
 
-m = -1.22;
+m = -0.825;
 ratioPV = ones(1, length(t))*m;
 ratioPV_in = [t', ratioPV'];
 c = 23.56;
 
+% C_prop_values = zeros(size(state,2),1);
+% C_prop_values(200200:end) = 2;
+% C_prop_in = [t', C_prop_values];
 
-% C_prop = 0; %propofol concentration [ug*mL^-1]
+C_prop_init = 0; %propofol concentration [ug*mL^-1]
+
 % S_0 = 0; %receptor sensitivity in hyperoxia [L*min^-1*(nM*L^-1)^-1]
 % A = 17.8; %Area constant
 % P_o2 = 100; %partial pressure of oxygen
