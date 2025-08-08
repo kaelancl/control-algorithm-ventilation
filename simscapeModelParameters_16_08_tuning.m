@@ -12,14 +12,14 @@ t = [0:0.01:(simTime-0.01)];
 
 %VENTILATOR SETTINGS
 PEEP = 8.5; %cmH2O, Posistive End Expiratory Pressure
-Paw_Ref = 15; %Pressure target, cmH_2O
+Paw_Ref = 18; %Pressure target, cmH_2O
 
 %Reference support target changes after 60s
 Paw_Ref_in = [t', ones(length(t),1)*Paw_Ref];
 Paw_Ref_in(7000:end,2) = Paw_Ref+2;
 PS = Paw_Ref - PEEP;
 
-maxAllowableChange = 5; %+- max allowed change in pressure support (cmH2O)
+maxAllowableChange = 10; %+- max allowed change in pressure support (cmH2O)
 Paw_Threshold = -1; %cmH2O, trigger variable
 Q_Threshold_Percentage = 0.36; %percent of peak flow, cycling off variable
 numOfBreaths = 20; %number of tidal breaths until support adjust
@@ -34,8 +34,8 @@ beta = 3.2576;
 
 %CONTROLLER
 %PID
-Kp = 3; %Proportional constant, PID cntrol
-Ti = 0.01; %Integral time constant, PID control
+Kp = 0.1; %Proportional constant, PID cntrol
+Ti = 1; %Integral time constant, PID control
 D = 0; %Derivative constant, PID control
 
 P = 1;
@@ -215,28 +215,28 @@ range_eff = 1.56/2;
 for idx=1:simTime/7
 
     %randomly shorten/lengthen pmus
-    pos_neg = 0;
-    while pos_neg == 0
-        pos_neg = randi([-1,1],1);
-    end
-    adjust_length = rand()*range_eff;
-    length_eff = 700 + (pos_neg*adjust_length*100)
-    % renormalise length to 1 second
-    t_old = linspace(1,700,700);
-    t_new = linspace(1,length_eff,700);
-    
-    % Normalize time for interpolation
-    tau = t_old / 700;
-    tau_new = t_new / 300;
-    
-    Pmus_stretched = interp1(tau, pmus_model, tau_new, 'spline');
-    if length(Pmus_stretched) >= 700
-        Pmus_stretched = Pmus_stretched(1:700);
-    else
-        length_stretched_eff = length(Pmus_stretched);
-        Pmus_stretched = Pmus_stretched + zeros(2,700 - length_stretched_eff);
-    end
-    Pmus = [Pmus Pmus_stretched];
+    % pos_neg = 0;
+    % while pos_neg == 0
+    %     pos_neg = randi([-1,1],1);
+    % end
+    % adjust_length = rand()*range_eff;
+    % length_eff = 700 + (pos_neg*adjust_length*100)
+    % % renormalise length to 1 second
+    % t_old = linspace(1,700,700);
+    % t_new = linspace(1,length_eff,700);
+    % 
+    % % Normalize time for interpolation
+    % tau = t_old / 700;
+    % tau_new = t_new / 300;
+    % 
+    % Pmus_stretched = interp1(tau, pmus_model, tau_new, 'spline');
+    % if length(Pmus_stretched) >= 700
+    %     Pmus_stretched = Pmus_stretched(1:700);
+    % else
+    %     length_stretched_eff = length(Pmus_stretched);
+    %     Pmus_stretched = Pmus_stretched + zeros(2,700 - length_stretched_eff);
+    % end
+    Pmus = [Pmus pmus_model];
     %startPos = startPos + lengthBreath;
     %Pmus(startPos+1:startPos+231) = 0;
     %startPos = startPos + 231;
@@ -256,7 +256,7 @@ ratioPV = ones(1, length(t))*m;
 ratioPV_in = [t', ratioPV'];
 c = 23.56;
 
-initial_peak_effort = 7.6;
+initial_peak_effort = -7.6;
 % C_prop_values = zeros(size(state,2),1);
 % C_prop_values(200200:end) = 2;
 % C_prop_in = [t', C_prop_values];
@@ -305,7 +305,35 @@ pmus_array = ...
 8.32712845152772	7.86084961938944	7.39466034016806	6.92884796077444	6.46285558675153	5.99709025307945	5.53111826594518	5.06536276765490	4.59963934902614	4.13385453994266	3.66818546991775	3.20246679761484	2.73672332433147	2.27050988208754	1.85508365411562	1.47727018951182;...
 7.57960998886679	7.13840128992502	6.69730279182784	6.25713070167087	5.81612331222786	5.37548174765759	4.93468252706403	4.49420422606204	4.05354609517805	3.61258158085774	3.17161584615783	2.73034796123167	2.28799731183129	1.84309533118342	1.47667746892257	1.16983539531106;...
 6.83134879540383	6.41506974668250	5.99988944823208	5.58422101329840	5.16863690252799	4.75343725022152	4.33722350841555	3.92134974234469	3.50516855183661	3.08844931876491	2.67049382603472	2.24997798355149	1.82327893510971	1.37930157594579	1.02912256572725	0.771692094620232;...
-6.08230484830341	5.69099234298216	5.30101725337789	4.91020628198063	4.51940179029062	4.12771651843734	3.73617781747217	3.34395172543840	2.95065125236925	2.55454321303406	2.15205220709006	1.73582091734394	1.26073612937778	0.178310121249703	0.161288355039994	0.176538749852994]
+6.08230484830341	5.69099234298216	5.30101725337789	4.91020628198063	4.51940179029062	4.12771651843734	3.73617781747217	3.34395172543840	2.95065125236925	2.55454321303406	2.15205220709006	1.73582091734394	1.26073612937778	0.178310121249703	0.161288355039994	0.176538749852994];
+
+pmus_array = pmus_array .* -1;
+
+p_dyn_array = zeros(size(pmus_array));
+
+for i = 1:size(p_dyn_array,1)
+    for j = 1:size(p_dyn_array,2)
+        p_dyn_array(i,j) = (PS_array(j)-PEEP)-(pmus_array(i,j)*2/3);
+    end
+end
+
+%% color map Pdyn
+
+figure()
+imagesc(p_dyn_array)
+caxis([8 14]);
+
+% Create custom green→red colormap
+nColors = 256;
+green = [0, 1, 0];  % RGB for green
+red   = [1, 0, 0];  % RGB for red
+customMap = [linspace(green(1), red(1), nColors)', ...
+             linspace(green(2), red(2), nColors)', ...
+             linspace(green(3), red(3), nColors)'];
+
+colormap(customMap);
+colorbar;
+
 
 
 % S_0 = 0; %receptor sensitivity in hyperoxia [L*min^-1*(nM*L^-1)^-1]
