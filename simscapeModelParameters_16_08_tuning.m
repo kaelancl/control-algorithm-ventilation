@@ -34,10 +34,10 @@ beta = 3.2576;
 
 %CONTROLLER
 %PID
-Kp =10; %Proportional constant, PID cntrol
-Ti = 1; %Integral time constant, PID control
+Kp =0.001; %Proportional constant, PID cntrol
+Ti = 0.0001; %Integral time constant, PID control
 D = 0; %Derivative constant, PID control
-R_control = Resistance;
+
 
 P = 1;
 I = 1;
@@ -59,6 +59,7 @@ a2 = 0.1; %gain for muscle pressure driven support level adjustment
 
 %INITIAL PATIENT SETTINGS
 Resistance = 16.25; %cmH2O/L/s
+R_control = Resistance;
 Compliance = 1/36.56; %L/cmH2O
 %initialMaxEffort = 10.5; %-cmH2O, initial maximum effort of patient
 %maximum effort changes as PSV level changes

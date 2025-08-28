@@ -4,14 +4,15 @@
 addpath("C:\Users\292636H\OneDrive - Curtin\PhD\Matlab")
 addpath("C:\Users\292636H\OneDrive - Curtin\PhD\Matlab\B-MIQP Working Folder\.mat files")
 %% Extract Single Breath\load patient data
-load('patient_data/20_breaths_pat_5_1607_0004.mat')
+load('patient_data/20_breaths_pat_2_1004_0553.mat')
 
-R = 16.25;
-E = 36.56;
-PEEP = 8.5;
-start_insp = [209
-    645
-    1226
+R = 11.13;
+E = 12.61;
+PEEP = 6;
+
+start_insp = [
+    2954
+    3443
     1767
     2243
     2702
@@ -35,9 +36,9 @@ start_insp = [209
 
 %% Determine start of each patient inspiration
 k_soe = find(diff(dataSignals.phase) == 32)+1;
-Ecw = 19.56; %chest wall elastance
+Ecw = 11.43; %chest wall elastance
 num_breaths = 20;
-dataSignals.PEEP = 8.5;
+dataSignals.PEEP = 6;
 %Determine start of each breath
 % [pesShiftedEachBreath,pes_filt_shift, pes_shift,Pmus_inv_allBreaths, ...
 %     volume_allBreaths, flow_allBreaths, paw_allBreaths, Pmus_inv_raw_allBreaths, phase_allBreaths] ...
@@ -69,15 +70,18 @@ while counter < num_breaths +1
         % paw = paw_allBreaths{i};
         % phase = phase_allBreaths{i};
    for i = 1:20
-        % volume = dataSignals.vol(start_insp(i):start_insp(i+1));
-        % flow = dataSignals.flow(start_insp(i):start_insp(i+1));
-        % paw = dataSignals.pres(start_insp(i):start_insp(i+1));
-        % phase = dataSignals.phase(start_insp(i):start_insp(i+1));
+        volume = dataSignals.vol(start_insp(i):start_insp(i+1))/1000;
+        flow = dataSignals.flow(start_insp(i):start_insp(i+1))/1000;
+        paw = dataSignals.pres(start_insp(i):start_insp(i+1));
+        phase = dataSignals.phase(start_insp(i):start_insp(i+1));
+        pes = dataSignals.pes(start_insp(i):start_insp(i+1));
         
-        volume = dataSignals.vol(start_insp(i):k_soe(i))/1000;
-        flow = dataSignals.flow(start_insp(i):k_soe(i))/10000;
-        paw = dataSignals.pres(start_insp(i):k_soe(i));
-        phase = dataSignals.phase(start_insp(i):k_soe(i));
+        flow = circshift(flow,-6);
+        
+        % volume = dataSignals.vol(start_insp(i):k_soe(i))/1000;
+        % flow = dataSignals.flow(start_insp(i):k_soe(i))/10000;
+        % paw = dataSignals.pres(start_insp(i):k_soe(i));
+        % phase = dataSignals.phase(start_insp(i):k_soe(i));
 
         %if no end expiratory volume present
         if volume(1) < 500
